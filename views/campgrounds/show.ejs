@@ -1,0 +1,189 @@
+<% include ../partials/header %>
+    <link rel="stylesheet" href="/lib/semantic/dist/components/rating.min.css">
+    <link rel="stylesheet" href="/lib/semantic/dist/fomantic.css">
+    <link rel="stylesheet" href="/lib/chartist/chartist.min.css">
+    <link rel="stylesheet" href="/css/gmap.css">
+    <link rel="stylesheet" href="/css/campShow.css">
+    <link rel="stylesheet" href="/css/review.css">
+    <link rel="stylesheet" href="/css/chart.css">
+</head>
+<body>
+<%include  ../partials/navbar%>
+
+<header class="banner d-flex justify-content-center align-items-center" style="background-image: url(<%= campground.image %>);">
+    <div class="overlay"></div>
+    <div class="header container text-center text-white"> 
+        <h1 class='display-3 d-block'><%= campground.name %></h1>
+        <% if(currentUser && !currentUser.equals(campground.author.id)) { %>
+            <a data-toggle="modal" data-target="#bookCampModal" class=" btn btn-primary px-4 headerButton mt-3 mt-md-0" id="bookingBtn">Book</a>
+        <%}%>
+    </div>
+</header>
+
+<div class="container-fluid mt-5">
+    <div class="row px-2 px-md-3 px-lg-5" id="<%= campground._id %>">
+        <%# MAP SECTION %>
+        <div class="col-lg-5 d-sm-none d-lg-block">
+            <div id="map"></div>
+        </div>
+        <div class="col-lg-7">
+        <%# POST OPTIONS %>
+        <div class="mb-4" id="postOptions">
+            <%# VIEW IN GOOGLE MAPS %>
+            <a href="https://maps.google.com/?q=<%= campground.coordinates.lat %>,<%= campground.coordinates.long %>" id="gMapLink">View in Google Maps</a> 
+            <%# EDIT AND DELETE %>
+            <% if(currentUser && currentUser.equals(campground.author.id)) { %>
+            <p class="d-inline"> | </p>
+            <p class=" d-inline"><a href="/campgrounds/<%= campground.id %>/edit" id="showCampDeleteBtn">Edit</a></p>
+            <p class="d-inline"> | </p>
+            <button id="showCampDeleteBtn" data-toggle="modal" data-target="#confirmPostDelete">Delete</button>
+            <% } %>
+            <%# RATING %>
+            <div class="float-md-right mt-2 mt-md-0">
+                <p class="lead d-inline">Ratings: </p>
+                <div class="ui heart rating" data-rating="<%= parseInt(campground.rating)%>" data-max-rating="5"></div>
+            </div>
+            </div>
+            <div class="d-none d-md-block">
+            
+            </div>
+            <%# PRICE %>
+            <p class="lead mb-0 number-regular"> <strong> Price: $ <%= campground.price %> / night </strong></p>
+            <p class="my-0 lead">Hosted by 
+                <% if(currentUser && currentUser.equals(campground.author.id)) { %>
+                    You
+                <%} else {%>
+                <%= campground.author.username %>
+                <%}%>
+            </p>
+            <p id="createdOn">on <%=campground.created.toDateString()%></p>
+
+            <ul class="nav nav-pills mb-4" id="nav-date">
+            <li class="nav-item">
+                <a class="nav-link active" href="#">13 July</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">14 Jul</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">15 Jul</a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="#">16 Jul</a>
+            </li>
+            </ul>
+
+            <p>No. of Vacancies: <span id="vacancies">0</span></p>
+
+            <p class="lead" id="campgroundDesc"> <%=campground.description%></p>
+        </div>
+    </div>
+    <hr>
+    <div class="container-fluid" id="reviewSection">
+    <div class="row">
+        <div class="col-lg-4">
+            <div class="text-center sticky-top pt-5">
+                <h5 class="mb-0">Ratings</h5>
+                <h2 class="display-2 number"><%=campground.rating.toFixed(1)%></h2>
+                <div class="ui rating heart" data-rating="<%=Math.floor(campground.rating)%>" data-max-rating="5"></div>
+                <h6><i class="fas fa-user mr-2"></i><span id="noOfRatings"><%=campground.reviews.length%></span></h2>
+                <div class="ct-chart mx-md-5 m-lg-0 ml-lg-5"></div>
+            </div>
+        </div>
+        <div class="offset-lg-1 col-lg-7">
+        <div class="ui comments">
+            <h3 class="mt-3 mb-3 mt-md-5">Reviews</h3>
+            <div class="text-center text-md-left mb-3">
+            <% if(currentUser && !currentUser.equals(campground.author.id)) { %>
+                <% if(currentUser.reviewedCamps.includes(campground._id)){ %>
+                    <a href="#reviewSection" class="btn btn-primary px-4 my-md-0 my-2" id="reviewBtn"> Edit Your Review </a>             
+                <%} else {%>
+                    <a class="btn btn-primary px-4 my-md-0 my-2" id="reviewBtn"  data-toggle="modal" data-target="#addReviewModal"> Leave a Review </a>
+                <% } %>
+            <% } %>
+            </div>
+						
+						<div id="comments">
+            <% if(campground.reviews.length == 0){ %>
+                <p class="lead" id='noReviewsText'>No Reviews Yet. Be the first one to leave a review!</p>
+            <% } else {%>           
+            <% campground.reviews.forEach(function(review){ %>
+            <div class="comment" id="<%=review.id%>">
+                <a class="avatar">
+                    <img src="https://www.w3schools.com/howto/img_avatar.png">
+                </a>
+                <div class="content">
+                    <a class="author"><%= review.author.username %></a>    
+                    <div class="metadata">
+                    <span class="date number-regular"><%= review.created.toDateString() %></span>
+                    </div>
+                    <div class="text">
+                        <form action="/campgrounds/<%= campground.id %>/reviews/<%= review._id %>?_method=PUT" method="POST" class="d-none">
+                            <div class="input-group my-2">
+                                <input type="text" class="form-control" value="<%=review.content%>" name="review[content]">
+                                <input type="number" name="review[rating]" hidden>
+                                <div class="input-group-append">
+                                <input type="submit" value="Submit" class="btn reviewSubmit">
+                                </div>
+                            </div>
+                            <div class="ui heart rating interactable d-none edit" data-rating="<%=review.rating%>" data-max-rating="5"></div>
+                        </form>
+                        <div class="mb-2 reviewText">
+                            <%=review.content%>
+                        </div>
+                        <div class="ui heart rating" data-rating="<%=review.rating%>" data-max-rating="5"></div>
+                    </div>
+                    <% if(currentUser && currentUser.equals(review.author.id)) {%>
+                    <div class="actions">
+                        <button class="commentActionBtn" id="reviewEditButton" onclick="toggleEditForm(this)">Edit</button>
+                        <button class="commentActionBtn" id="reviewDeleteBtn">Delete</button>        
+                    </div>
+                    <%}%>
+                    </div>
+                </div> 
+            <% }) %>
+						<%}%>
+						</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% include ../partials/modals/addReview %>
+<% include ../partials/modals/postDelete %>
+<% include ../partials/modals/logout %>
+<% include ../partials/modals/book %>
+
+<div class="d-none">
+    <input type="text" value="<%= campground.ratingsNumber[5]%>" id="5">
+    <input type="text" value="<%= campground.ratingsNumber[4]%>" id="4">
+    <input type="text" value="<%= campground.ratingsNumber[3]%>" id="3">
+    <input type="text" value="<%= campground.ratingsNumber[2]%>" id="2">
+    <input type="text" value="<%= campground.ratingsNumber[1]%>" id="1">
+    <input type="text" id="lattitude" value="<%= campground.coordinates.lat %>" hidden>
+    <input type="text" id="longitude" value="<%= campground.coordinates.long %>" hidden>
+</div>
+
+<script src="/lib/jQuery.3.1.1.min.js"></script>
+<script src="/js/map/showMap.js"></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC5HBuQQ1a4Uoyr_l7yxJokjnQDO43Nruk&libraries=places&callback=initMap"
+        async defer></script>
+<script src="/lib/semantic/dist/components/rating.min.js"></script>
+<script src="/lib/chartist/chartist.min.js"></script>
+<script src="/js/chart.js"></script>
+<script src="/js/ratingAndEdit.js"></script>
+<script src="/js/navbarBG.js"></script>
+<script src="/lib/bootstrap/bootstrap.min.js"></script>
+<script src="/lib/semantic/dist/fomantic.min.js"></script>
+<% if (success && success.length > 0) {%>
+<script>
+    $('body').toast({
+        title: 'Success',
+        message: '<%=success[0]%>',
+        class : 'success'
+    });
+</script>
+<% } %>
+<!--ajax-->
+<script src="/js/ajax/deleteComment.js"></script>
+<% include ../partials/footer %>
